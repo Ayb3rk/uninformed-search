@@ -1,86 +1,60 @@
-from importlib.resources import path
-import queue
-
-
 def BFS (start, finish, list, minNum):
     path = []
-    for i in list:
-        path.append(i)
-        if(len(path) == minNum):
+    for i in list: #list is sorted naturally
+        path.append(i) #we append each node to path
+        if(len(path) == minNum): #if path is long enough, we break
             break
-    path.append(finish)
-    path.insert(0, start)
-    if(len(path)-2 < minNum):
+    path.append(finish) #we append finish to path
+    path.insert(0, start) #we insert start to path
+    if(len(path)-2 < minNum): #if path is not long enough, we return None
         return None
-    return path
+    return path #if path is long enough, we return path
     
 
 def DFS (start, finish, customerCoordinates, adjacencyList, minNum) :
-    path = []
-    visitedCustomers = []
-    followList = customerCoordinates
+    stack = [] #stack
+    visitedCustomers = [] #visited customers
+    followList = customerCoordinates #list of customers to follow
     for i in followList:
-        if(i not in visitedCustomers):
-            path.append(i)
-            visitedCustomers.append(i)
-        if(len(path) == minNum):
+        if(i not in visitedCustomers): #if customer is not visited
+            stack.append(i) #we append it to stack
+            visitedCustomers.append(i) #we append it to visited customers
+        if(len(stack) == minNum): #if stack is long enough, we break
             break
-        followList = adjacencyList[customerCoordinates.index(i)]
-    path = path[::-1]
-    path.append(finish)
-    path.insert(0, start)
-    if(len(path)-2 < minNum):
-        return None
-    return path
+        followList = adjacencyList[customerCoordinates.index(i)] #else we change followList to adjacency list of customer
+
+    stack = stack[::-1] #we reverse stack
+    stack.append(finish) #we append finish to stack
+    stack.insert(0, start) #we insert start to stack
+    if(len(stack)-2 < minNum):
+        return None #if stack is not long enough, we return None
+    return stack #if stack is long enough, we return stack
 
 def get_cost(src, dest): 
     return abs(src[0]-dest[0]) + abs(src[1]-dest[1])
-        
-
 
 def UCS ( startCoordiante, finishCoordinate, customerCoordinates, customerAdjacencyList, minNum ) :
-    path = []
-    pathsAndCosts = []
-    priorityQueue = []
-    visitedCustomers = []
-    priorityQueue.append([0, startCoordiante])
-    distance = {}
-    for i in customerCoordinates:
-        distance[i] = float("inf")
-    distance[startCoordiante] = 0
-    while len(priorityQueue) != 0:
-        priorityQueue.sort()
-        current = priorityQueue.pop(0)
-        if current[1] not in visitedCustomers:
-            visitedCustomers.append(current[1])
-            path.append(current[1])
-            if(current[1] == finishCoordinate):
-                path = []
+    if len(customerCoordinates)-2 < minNum:
+        return None
+    frontier = [] #priority queue
+    frontier.append([0, startCoordiante, [startCoordiante]]) #cost, node, path followed
+    costsAndPaths = [] #cost, path (finished paths)
+    while frontier:
+        node = frontier.pop(0)
+        if node[1] not in node[2][:-1]: #if node is not in path (since it includes itself, we check if it is in path except the last one)
+            if node[1] == finishCoordinate and len(node[2])-2 < minNum:
+                continue #if node is finish and path is not long enough, we continue, do not append it to costsAndPaths
+            if len(node[2]) - 2 >= minNum:
+                costsAndPaths.append([node[0], node[2]]) #if path is long enough, we append it to costsAndPaths
                 continue
-            if(len(path)-1 == minNum):
-                finishDistance = get_cost(current[1], finishCoordinate)
-                path.append(finishCoordinate)
-                pathsAndCosts.append([current[0] + finishDistance, path])
-                path = []
-                path.append(startCoordiante)
-            for i in customerAdjacencyList[customerCoordinates.index(current[1])]:
-                if distance[i] > current[0] + get_cost(current[1], i):
-                    distance[i] = current[0] + get_cost(current[1], i)
-                    if(priorityQueue.count([distance[i], i]) == 0):
-                        priorityQueue.append([distance[i], i])
-                    else:
-                        if priorityQueue[priorityQueue.index([distance[i], i])][0] > distance[i]:
-                            priorityQueue[priorityQueue.index([distance[i], i])][0] = distance[i]
-
-    pathsAndCosts.sort()
-    return pathsAndCosts[0][1]
-
-
-
-
-
-
-
+            for i in customerAdjacencyList[customerCoordinates.index(node[1])]: #for each node in adjacency list of node
+                if i not in node[2]: #if node is not in path
+                    frontier.append([node[0]+get_cost(node[1], i), i, node[2] + [i]]) #we append it to frontier with cost, node, path
+            frontier.sort(key=lambda x: x[0]) #sort frontier by cost
+    if costsAndPaths: #after we finish, if costsAndPaths is not empty
+        costsAndPaths.sort(key=lambda x: x[0]) #sort costsAndPaths by cost
+        return costsAndPaths[0][1] #return the first path
+    return None #if costsAndPaths is empty, return None
 
 
 def CreateGraphList(env):
@@ -125,12 +99,15 @@ def UnInformedSearch ( method_name , problem_file_name ) :
                 customerAdjacencyList[customerCoordinates.index(i)].append(j)
     
     if(method_name == "BFS"):
+        customerCoordinates.remove(startCoordiante)
+        customerCoordinates.remove(finishCoordinate)
         result = BFS(startCoordiante, finishCoordinate, customerCoordinates, minNum)
     if(method_name == "DFS"):
+        customerCoordinates.remove(startCoordiante)
+        customerCoordinates.remove(finishCoordinate)
         result = DFS(startCoordiante, finishCoordinate, customerCoordinates, customerAdjacencyList, minNum)
     if(method_name == "UCS"):
         result = UCS(startCoordiante, finishCoordinate, customerCoordinates, customerAdjacencyList, minNum)
     return result
 
-print(UnInformedSearch("UCS", "example.txt"))
-
+print(UnInformedSearch("BFS", "example.txt"))
